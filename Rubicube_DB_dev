@@ -1,0 +1,603 @@
+-- =============================================
+-- OPTIMIZED DATABASE SCHEMA FOR RUBICUBE
+-- Key Changes Applied:
+-- 1. All ID columns configured as IDENTITY(1,1)
+-- 2. NVARCHAR replaced with VARCHAR throughout
+-- 3. SQL keywords avoided in naming
+-- 4. Foreign key relationships established
+-- 5. Audit columns added to all tables
+-- =============================================
+
+USE [RubicubeDev]
+GO
+
+-- =============================================
+-- CORE TABLES
+-- =============================================
+
+-- Client Table (Master reference for all operations)
+CREATE TABLE [dbo].[Client](
+    [ClientID] INT IDENTITY(1,1) NOT NULL,
+    [ClientCode] VARCHAR(10) NOT NULL,
+    [ClientName] VARCHAR(100) NULL,
+    [ClientAddress] VARCHAR(200) NULL,
+    [ContactPerson] VARCHAR(100) NULL,
+    [ContactNo1] VARCHAR(50) NULL,
+    [ContactNo2] VARCHAR(50) NULL,
+    [EmailAddress] VARCHAR(200) NULL,
+    [ProfileUpdated] BIT NULL DEFAULT 0,
+    [StatusFlag] BIT NOT NULL DEFAULT 1,
+    [Logo] VARCHAR(100) NULL,
+    [Icon] VARCHAR(100) NULL,
+    [HostName] VARCHAR(100) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_Client] PRIMARY KEY CLUSTERED ([ClientID] ASC),
+    CONSTRAINT [UQ_Client_Code] UNIQUE ([ClientCode])
+);
+GO
+
+-- User Table
+CREATE TABLE [dbo].[UserAccount](
+    [UserID] INT IDENTITY(1,1) NOT NULL,
+    [UserName] VARCHAR(100) NOT NULL,
+    [UserPassword] VARCHAR(255) NOT NULL,
+    [ClientID] INT NULL,
+    [FullName] VARCHAR(100) NULL,
+    [DateOfBirth] DATE NULL,
+    [Gender] CHAR(1) NOT NULL,
+    [PhoneNumber] VARCHAR(50) NULL,
+    [EmailAddress] VARCHAR(200) NOT NULL,
+    [Designation] VARCHAR(100) NULL,
+    [Website] VARCHAR(200) NULL,
+    [UserAddress] VARCHAR(200) NULL,
+    [LanguagePreference] VARCHAR(20) NULL,
+    [ThemePreference] VARCHAR(50) NULL,
+    [ColorPreference] VARCHAR(20) NULL,
+    [IsAdmin] BIT NULL DEFAULT 0,
+    [IsSuperAdmin] BIT NOT NULL DEFAULT 0,
+    [LastVisitPage] INT NULL DEFAULT 0,
+    [StatusFlag] BIT NOT NULL DEFAULT 1,
+    [IsInvoiceGenerated] BIT NULL DEFAULT 0,
+    [AcceptTermsConditions] BIT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_UserAccount] PRIMARY KEY CLUSTERED ([UserID] ASC),
+    CONSTRAINT [UQ_UserAccount_Email] UNIQUE ([EmailAddress]),
+    CONSTRAINT [FK_UserAccount_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID])
+);
+GO
+
+-- Role Table
+CREATE TABLE [dbo].[UserRole](
+    [RoleID] INT IDENTITY(1,1) NOT NULL,
+    [ClientID] INT NOT NULL,
+    [RoleName] VARCHAR(100) NULL,
+    [RoleType] VARCHAR(50) NULL DEFAULT 'Report',
+    [StatusFlag] BIT NOT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_UserRole] PRIMARY KEY CLUSTERED ([RoleID] ASC),
+    CONSTRAINT [FK_UserRole_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID])
+);
+GO
+
+-- UserRoleMapping Table
+CREATE TABLE [dbo].[UserRoleMapping](
+    [UserRoleMappingID] INT IDENTITY(1,1) NOT NULL,
+    [UserID] INT NOT NULL,
+    [RoleID] INT NOT NULL,
+    [IsCurrentRole] BIT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_UserRoleMapping] PRIMARY KEY CLUSTERED ([UserRoleMappingID] ASC),
+    CONSTRAINT [FK_UserRoleMapping_User] FOREIGN KEY ([UserID]) 
+        REFERENCES [dbo].[UserAccount]([UserID]),
+    CONSTRAINT [FK_UserRoleMapping_Role] FOREIGN KEY ([RoleID]) 
+        REFERENCES [dbo].[UserRole]([RoleID])
+);
+GO
+
+-- =============================================
+-- MENU AND NAVIGATION
+-- =============================================
+
+-- ReportMaster Table
+CREATE TABLE [dbo].[ReportMaster](
+    [ReportMasterID] INT IDENTITY(1,1) NOT NULL,
+    [ClientID] INT NOT NULL,
+    [ReportName] VARCHAR(100) NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_ReportMaster] PRIMARY KEY CLUSTERED ([ReportMasterID] ASC),
+    CONSTRAINT [FK_ReportMaster_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID])
+);
+GO
+
+-- Menu Table
+CREATE TABLE [dbo].[MenuItems](
+    [MenuID] INT IDENTITY(1,1) NOT NULL,
+    [ReportMasterID] INT NULL,
+    [MenuName] VARCHAR(100) NULL,
+    [MenuPath] VARCHAR(200) NULL,
+    [ParentMenuID] INT NOT NULL DEFAULT 0,
+    [ReportUrl] VARCHAR(MAX) NULL,
+    [ReportID] VARCHAR(50) NULL,
+    [PageName] VARCHAR(100) NULL,
+    [MenuIcon] VARCHAR(100) NULL,
+    [DisplayOrder] INT NOT NULL DEFAULT 0,
+    [StatusFlag] BIT NOT NULL DEFAULT 1,
+    [StagingReportUrl] VARCHAR(MAX) NULL,
+    [ProdReportUrl] VARCHAR(MAX) NULL,
+    [StagingReportID] VARCHAR(50) NULL,
+    [ProdReportID] VARCHAR(50) NULL,
+    [MenuIconImage] VARCHAR(200) NULL,
+    [ImagePath] VARCHAR(MAX) NULL,
+    [IsImageIcon] BIT NULL DEFAULT 0,
+    [MenuHelpDescription] VARCHAR(MAX) NULL,
+    [MenuKey] VARCHAR(100) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_MenuItems] PRIMARY KEY CLUSTERED ([MenuID] ASC),
+    CONSTRAINT [FK_MenuItems_ReportMaster] FOREIGN KEY ([ReportMasterID]) 
+        REFERENCES [dbo].[ReportMaster]([ReportMasterID])
+);
+GO
+
+-- RoleMenu Mapping
+CREATE TABLE [dbo].[RoleMenuMapping](
+    [RoleMenuID] INT IDENTITY(1,1) NOT NULL,
+    [RoleID] INT NOT NULL,
+    [ReportMasterID] INT NOT NULL,
+    [MenuID] INT NOT NULL,
+    [StatusFlag] BIT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_RoleMenuMapping] PRIMARY KEY CLUSTERED ([RoleMenuID] ASC),
+    CONSTRAINT [FK_RoleMenuMapping_Role] FOREIGN KEY ([RoleID]) 
+        REFERENCES [dbo].[UserRole]([RoleID]),
+    CONSTRAINT [FK_RoleMenuMapping_ReportMaster] FOREIGN KEY ([ReportMasterID]) 
+        REFERENCES [dbo].[ReportMaster]([ReportMasterID]),
+    CONSTRAINT [FK_RoleMenuMapping_Menu] FOREIGN KEY ([MenuID]) 
+        REFERENCES [dbo].[MenuItems]([MenuID])
+);
+GO
+
+-- =============================================
+-- AUDIT AND LOGGING
+-- =============================================
+
+-- AuditLogs Table
+CREATE TABLE [dbo].[AuditLogs](
+    [AuditID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [UserID] INT NOT NULL,
+    [SessionID] UNIQUEIDENTIFIER NULL,
+    [EventType] VARCHAR(100) NOT NULL,
+    [EventData] VARCHAR(MAX) NOT NULL,
+    [ModuleName] VARCHAR(200) NULL,
+    [MenuName] VARCHAR(200) NULL,
+    [SubMenuName] VARCHAR(200) NULL,
+    [LocationID] VARCHAR(50) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_AuditLogs] PRIMARY KEY CLUSTERED ([AuditID] ASC),
+    CONSTRAINT [FK_AuditLogs_User] FOREIGN KEY ([UserID]) 
+        REFERENCES [dbo].[UserAccount]([UserID])
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_AuditLogs_CreatedDate] ON [dbo].[AuditLogs]([CreatedDate] ASC);
+CREATE NONCLUSTERED INDEX [IX_AuditLogs_EventType] ON [dbo].[AuditLogs]([EventType] ASC);
+CREATE NONCLUSTERED INDEX [IX_AuditLogs_UserID] ON [dbo].[AuditLogs]([UserID] ASC);
+GO
+
+-- UserLog Table
+CREATE TABLE [dbo].[UserActivityLog](
+    [UserLogID] INT IDENTITY(1,1) NOT NULL,
+    [UserID] INT NOT NULL,
+    [LoginOn] DATETIME NULL,
+    [LogOutOn] DATETIME NULL,
+    [IsLoggedOut] BIT NULL DEFAULT 0,
+    [DeviceType] VARCHAR(50) NULL,
+    [DeviceID] VARCHAR(100) NULL,
+    [OperatingSystem] VARCHAR(100) NULL,
+    [OSVersion] VARCHAR(50) NULL,
+    [BrowserVersion] VARCHAR(100) NULL,
+    [SessionID] VARCHAR(MAX) NULL,
+    [RegionName] VARCHAR(100) NULL,
+    [CountryCode] VARCHAR(10) NULL,
+    [CountryName] VARCHAR(100) NULL,
+    [CityName] VARCHAR(100) NULL,
+    [Latitude] VARCHAR(50) NULL,
+    [Longitude] VARCHAR(50) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_UserActivityLog] PRIMARY KEY CLUSTERED ([UserLogID] ASC),
+    CONSTRAINT [FK_UserActivityLog_User] FOREIGN KEY ([UserID]) 
+        REFERENCES [dbo].[UserAccount]([UserID])
+);
+GO
+
+-- =============================================
+-- INTEGRATION TABLES
+-- =============================================
+
+-- IntegrationApp Table
+CREATE TABLE [dbo].[IntegrationApp](
+    [IntegrationAppID] INT IDENTITY(1,1) NOT NULL,
+    [AppName] VARCHAR(200) NOT NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_IntegrationApp] PRIMARY KEY CLUSTERED ([IntegrationAppID] ASC)
+);
+GO
+
+-- QBOCredentials Table
+CREATE TABLE [dbo].[QBOCredentials](
+    [QBOCredentialID] INT IDENTITY(1,1) NOT NULL,
+    [ClientIDValue] VARCHAR(MAX) NULL,
+    [ClientSecretValue] VARCHAR(MAX) NULL,
+    [TokenEndpoint] VARCHAR(MAX) NULL,
+    [RealmID] VARCHAR(100) NULL,
+    [ClientID] INT NULL,
+    [AccountName] VARCHAR(200) NULL,
+    [LoginClientID] INT NULL,
+    [CompanyName] VARCHAR(MAX) NULL,
+    [ApplicationID] INT NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_QBOCredentials] PRIMARY KEY CLUSTERED ([QBOCredentialID] ASC),
+    CONSTRAINT [FK_QBOCredentials_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID]),
+    CONSTRAINT [FK_QBOCredentials_IntegrationApp] FOREIGN KEY ([ApplicationID]) 
+        REFERENCES [dbo].[IntegrationApp]([IntegrationAppID])
+);
+GO
+
+-- OAuthTokens Table
+CREATE TABLE [dbo].[OAuthTokens](
+    [TokenID] INT IDENTITY(1,1) NOT NULL,
+    [RefreshToken] VARCHAR(MAX) NOT NULL,
+    [TokenCreatedAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ExpirationTime] DATETIME NOT NULL,
+    [QBOCredentialID] INT NULL,
+    [ClientIDValue] VARCHAR(MAX) NULL,
+    [RealmID] VARCHAR(100) NULL,
+    [IsActive] BIT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_OAuthTokens] PRIMARY KEY CLUSTERED ([TokenID] ASC),
+    CONSTRAINT [FK_OAuthTokens_QBOCredentials] FOREIGN KEY ([QBOCredentialID]) 
+        REFERENCES [dbo].[QBOCredentials]([QBOCredentialID])
+);
+GO
+
+-- CodeRealmId Table
+CREATE TABLE [dbo].[CodeRealmMapping](
+    [CodeRealmID] INT IDENTITY(1,1) NOT NULL,
+    [AuthCode] VARCHAR(MAX) NOT NULL,
+    [RealmID] VARCHAR(MAX) NOT NULL,
+    [ClientIDValue] VARCHAR(MAX) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_CodeRealmMapping] PRIMARY KEY CLUSTERED ([CodeRealmID] ASC)
+);
+GO
+
+-- QBOCompanyMapping Table
+CREATE TABLE [dbo].[QBOCompanyMapping](
+    [QBOCompanyMappingID] INT IDENTITY(1,1) NOT NULL,
+    [QBOCredentialID] INT NULL,
+    [CompanyName] VARCHAR(MAX) NULL,
+    [IsActive] BIT NULL DEFAULT 1,
+    [RealmID] VARCHAR(100) NULL,
+    [RefreshToken] VARCHAR(MAX) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_QBOCompanyMapping] PRIMARY KEY CLUSTERED ([QBOCompanyMappingID] ASC),
+    CONSTRAINT [FK_QBOCompanyMapping_QBOCredentials] FOREIGN KEY ([QBOCredentialID]) 
+        REFERENCES [dbo].[QBOCredentials]([QBOCredentialID])
+);
+GO
+
+-- =============================================
+-- INVOICE AND MAPPING TABLES
+-- =============================================
+
+-- ReportInvoiceMapping Table
+CREATE TABLE [dbo].[ReportInvoiceMapping](
+    [ReportInvoiceMappingID] INT IDENTITY(1,1) NOT NULL,
+    [ClientID] INT NULL,
+    [LoginClientID] INT NULL,
+    [ApplicationID] INT NULL,
+    [AccountName] VARCHAR(200) NULL,
+    [CompanyName] VARCHAR(200) NULL,
+    [AccountID] INT NULL,
+    [CompanyID] INT NULL,
+    [CurrentDateValue] VARCHAR(50) NULL,
+    [CurrentDateDays] INT NULL,
+    [GrossSale] INT NULL,
+    [IsMappingCompleted] BIT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_ReportInvoiceMapping] PRIMARY KEY CLUSTERED ([ReportInvoiceMappingID] ASC),
+    CONSTRAINT [FK_ReportInvoiceMapping_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID]),
+    CONSTRAINT [FK_ReportInvoiceMapping_IntegrationApp] FOREIGN KEY ([ApplicationID]) 
+        REFERENCES [dbo].[IntegrationApp]([IntegrationAppID])
+);
+GO
+
+-- InvoiceMapping Table
+CREATE TABLE [dbo].[InvoiceFieldMapping](
+    [InvoiceMappingID] INT IDENTITY(1,1) NOT NULL,
+    [FieldDescription] VARCHAR(500) NULL,
+    [QBOFieldID] VARCHAR(20) NULL,
+    [QBOFieldNames] VARCHAR(MAX) NULL,
+    [ReportInvoiceID] INT NULL,
+    [RubicubeFieldsID] INT NULL,
+    [MappingFields] VARCHAR(MAX) NULL,
+    [LoginClientID] INT NULL,
+    [CompanyID] INT NULL,
+    [IsMapped] BIT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_InvoiceFieldMapping] PRIMARY KEY CLUSTERED ([InvoiceMappingID] ASC),
+    CONSTRAINT [FK_InvoiceFieldMapping_ReportInvoiceMapping] FOREIGN KEY ([ReportInvoiceID]) 
+        REFERENCES [dbo].[ReportInvoiceMapping]([ReportInvoiceMappingID])
+);
+GO
+
+-- RubicubeFields Table
+CREATE TABLE [dbo].[RubicubeFields](
+    [RubicubeFieldID] INT IDENTITY(1,1) NOT NULL,
+    [MenuID] INT NULL,
+    [RCFieldName] VARCHAR(200) NULL,
+    [IsCustomField] BIT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_RubicubeFields] PRIMARY KEY CLUSTERED ([RubicubeFieldID] ASC),
+    CONSTRAINT [FK_RubicubeFields_Menu] FOREIGN KEY ([MenuID]) 
+        REFERENCES [dbo].[MenuItems]([MenuID])
+);
+GO
+
+-- QboCustomerMapping Table
+CREATE TABLE [dbo].[QBOCustomerMapping](
+    [QBOCustomerMappingID] INT IDENTITY(1,1) NOT NULL,
+    [StoreName] VARCHAR(500) NOT NULL,
+    [CustomerName] VARCHAR(500) NOT NULL,
+    [QBOCustomerID] INT NULL,
+    [ReportInvoiceID] INT NULL,
+    [LoginClientID] INT NULL,
+    [StoreID] VARCHAR(100) NULL,
+    [CompanyID] INT NULL,
+    [QBOCredentialID] INT NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_QBOCustomerMapping] PRIMARY KEY CLUSTERED ([QBOCustomerMappingID] ASC),
+    CONSTRAINT [FK_QBOCustomerMapping_ReportInvoiceMapping] FOREIGN KEY ([ReportInvoiceID]) 
+        REFERENCES [dbo].[ReportInvoiceMapping]([ReportInvoiceMappingID]),
+    CONSTRAINT [FK_QBOCustomerMapping_QBOCredentials] FOREIGN KEY ([QBOCredentialID]) 
+        REFERENCES [dbo].[QBOCredentials]([QBOCredentialID])
+);
+GO
+
+-- FtpQBO Table
+CREATE TABLE [dbo].[FtpQBO](
+    [FtpQBOID] INT IDENTITY(1,1) NOT NULL,
+    [StoreName] VARCHAR(500) NULL,
+    [StoreNo] INT NULL,
+    [InvoiceNo] INT NULL,
+    [NationalMarketingPercentage] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    [RoyaltySubjectedAmount] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    [RoyaltyAmount] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    [IntranetFee] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    [ExtraPOS] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    [NationalBrandMarketingAmount] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    [WeekStartDate] DATE NULL,
+    [WeekEndDate] DATE NULL,
+    [IsInvoiceCreated] BIT NULL DEFAULT 0,
+    [IsChecked] BIT NULL DEFAULT 0,
+    [InvoiceCreatedDate] DATE NULL,
+    [IsDisabled] BIT NULL DEFAULT 0,
+    [AccountID] INT NULL,
+    [CompanyID] INT NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_FtpQBO] PRIMARY KEY CLUSTERED ([FtpQBOID] ASC)
+);
+GO
+
+-- =============================================
+-- OUTLIER DETECTION SYSTEM
+-- =============================================
+
+-- OutlierMetrics Table
+CREATE TABLE [dbo].[OutlierMetrics](
+    [MetricID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [MetricsFieldName] VARCHAR(200) NOT NULL,
+    [MeasureName] VARCHAR(300) NOT NULL,
+    [DescriptionText] VARCHAR(500) NOT NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_OutlierMetrics] PRIMARY KEY CLUSTERED ([MetricID] ASC)
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OutlierMetrics_FieldName] ON [dbo].[OutlierMetrics]([MetricsFieldName] ASC);
+GO
+
+-- OutlierCriteria Table
+CREATE TABLE [dbo].[OutlierCriteria](
+    [CriteriaID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [CriteriaName] VARCHAR(200) NOT NULL,
+    [OperatorSymbol] VARCHAR(20) NOT NULL,
+    [DescriptionText] VARCHAR(500) NOT NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_OutlierCriteria] PRIMARY KEY CLUSTERED ([CriteriaID] ASC)
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OutlierCriteria_CriteriaName] ON [dbo].[OutlierCriteria]([CriteriaName] ASC);
+GO
+
+-- OutlierConfiguration Table
+CREATE TABLE [dbo].[OutlierConfiguration](
+    [OutlierID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [OutlierName] VARCHAR(MAX) NOT NULL,
+    [ClientID] INT NOT NULL,
+    [MetricID] UNIQUEIDENTIFIER NOT NULL,
+    [ThresholdValue] INT NOT NULL DEFAULT 1,
+    [ExpiryDate] DATETIME NULL,
+    [LastRunDate] DATETIME NULL,
+    [LastDetectedDate] DATETIME NULL,
+    [EnvironmentType] INT NOT NULL,
+    [IsActive] BIT NULL DEFAULT 1,
+    [DescriptionText] VARCHAR(MAX) NULL,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_OutlierConfiguration] PRIMARY KEY CLUSTERED ([OutlierID] ASC),
+    CONSTRAINT [FK_OutlierConfiguration_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID]),
+    CONSTRAINT [FK_OutlierConfiguration_Metrics] FOREIGN KEY ([MetricID]) 
+        REFERENCES [dbo].[OutlierMetrics]([MetricID])
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OutlierConfiguration_Client_Metric] 
+ON [dbo].[OutlierConfiguration]([ClientID] ASC, [MetricID] ASC) INCLUDE([OutlierID]);
+GO
+
+-- ConfigurationCriteriaMapping Table
+CREATE TABLE [dbo].[ConfigurationCriteriaMapping](
+    [CriteriaMappingID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [OutlierID] UNIQUEIDENTIFIER NOT NULL,
+    [CriteriaID] UNIQUEIDENTIFIER NOT NULL,
+    [ValueField] VARCHAR(MAX) NOT NULL,
+    [OperatorName] VARCHAR(20) NOT NULL,
+    [DisplayOrder] INT NOT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_ConfigurationCriteriaMapping] PRIMARY KEY CLUSTERED ([CriteriaMappingID] ASC),
+    CONSTRAINT [FK_ConfigurationCriteriaMapping_Outlier] FOREIGN KEY ([OutlierID]) 
+        REFERENCES [dbo].[OutlierConfiguration]([OutlierID]) ON DELETE CASCADE,
+    CONSTRAINT [FK_ConfigurationCriteriaMapping_Criteria] FOREIGN KEY ([CriteriaID]) 
+        REFERENCES [dbo].[OutlierCriteria]([CriteriaID])
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_ConfigurationCriteriaMapping_Outlier] 
+ON [dbo].[ConfigurationCriteriaMapping]([OutlierID] ASC);
+CREATE NONCLUSTERED INDEX [IX_ConfigurationCriteriaMapping_Criteria] 
+ON [dbo].[ConfigurationCriteriaMapping]([CriteriaID] ASC);
+GO
+
+-- ConfigurationStoreMapping Table
+CREATE TABLE [dbo].[ConfigurationStoreMapping](
+    [StoreMappingID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [OutlierID] UNIQUEIDENTIFIER NOT NULL,
+    [StoreID] VARCHAR(50) NOT NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_ConfigurationStoreMapping] PRIMARY KEY CLUSTERED ([StoreMappingID] ASC),
+    CONSTRAINT [FK_ConfigurationStoreMapping_Outlier] FOREIGN KEY ([OutlierID]) 
+        REFERENCES [dbo].[OutlierConfiguration]([OutlierID]) ON DELETE CASCADE
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_ConfigurationStoreMapping_Outlier] 
+ON [dbo].[ConfigurationStoreMapping]([OutlierID] ASC);
+CREATE NONCLUSTERED INDEX [IX_ConfigurationStoreMapping_StoreID] 
+ON [dbo].[ConfigurationStoreMapping]([StoreID] ASC);
+GO
+
+-- OutlierRunHistory Table
+CREATE TABLE [dbo].[OutlierRunHistory](
+    [RunHistoryID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [OutlierID] UNIQUEIDENTIFIER NOT NULL,
+    [ClientID] INT NOT NULL,
+    [RunDate] DATETIME NOT NULL,
+    [RunStatusValue] VARCHAR(200) NOT NULL,
+    [StoreList] VARCHAR(MAX) NOT NULL,
+    [StoreID] VARCHAR(50) NOT NULL,
+    [QueryResult] DECIMAL(10, 2) NULL,
+    [IsDetected] BIT NOT NULL DEFAULT 0,
+    [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [CreatedBy] VARCHAR(255) NOT NULL,
+    [ModifiedDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ModifiedBy] VARCHAR(255) NOT NULL,
+    CONSTRAINT [PK_OutlierRunHistory] PRIMARY KEY CLUSTERED ([RunHistoryID] ASC),
+    CONSTRAINT [FK_OutlierRunHistory_Outlier] FOREIGN KEY ([OutlierID]) 
+        REFERENCES [dbo].[OutlierConfiguration]([OutlierID]) ON DELETE CASCADE,
+    CONSTRAINT [FK_OutlierRunHistory_Client] FOREIGN KEY ([ClientID]) 
+        REFERENCES [dbo].[Client]([ClientID])
+);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OutlierRunHistory_OutlierID] 
+ON [dbo].[OutlierRunHistory]([OutlierID] ASC);
+CREATE NONCLUSTERED INDEX [IX_OutlierRunHistory_RunDate] 
+ON [dbo].[OutlierRunHistory]([RunDate] ASC);
+GO
+
+-- NotificationRecipients Table
+CREATE TABLE [dbo].[NotificationRecipients](
+    [RecipientID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [RunHistoryID] UNIQUEIDENTIFIER NOT NULL,
